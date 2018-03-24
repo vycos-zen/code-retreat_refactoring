@@ -1,6 +1,14 @@
 exports = typeof window !== "undefined" && window !== null ? window : global;
 
-exports.Game = function() {
+var mock = [];
+var gameOutput = []
+var consoleMock = {
+  log: function(stringVMI) {
+    gameOutput.push(stringVMI);
+  }
+}
+
+Game = function() {
   var players          = new Array();
   var places           = new Array(6);
   var purses           = new Array(6);
@@ -61,8 +69,8 @@ exports.Game = function() {
     purses[this.howManyPlayers() - 1] = 0;
     inPenaltyBox[this.howManyPlayers() - 1] = false;
 
-    console.log(playerName + " was added");
-    console.log("They are player number " + players.length);
+    consoleMock.log(playerName + " was added");
+    consoleMock.log("They are player number " + players.length);
 
     return true;
   };
@@ -74,34 +82,34 @@ exports.Game = function() {
 
   var askQuestion = function(){
     if(currentCategory() == 'Pop')
-      console.log(popQuestions.shift());
+      consoleMock.log(popQuestions.shift());
     if(currentCategory() == 'Science')
-      console.log(scienceQuestions.shift());
+      consoleMock.log(scienceQuestions.shift());
     if(currentCategory() == 'Sports')
-      console.log(sportsQuestions.shift());
+      consoleMock.log(sportsQuestions.shift());
     if(currentCategory() == 'Rock')
-      console.log(rockQuestions.shift());
+      consoleMock.log(rockQuestions.shift());
   };
 
   this.roll = function(roll){
-    console.log(players[currentPlayer] + " is the current player");
-    console.log("They have rolled a " + roll);
+    consoleMock.log(players[currentPlayer] + " is the current player");
+    consoleMock.log("They have rolled a " + roll);
 
     if(inPenaltyBox[currentPlayer]){
       if(roll % 2 != 0){
         isGettingOutOfPenaltyBox = true;
 
-        console.log(players[currentPlayer] + " is getting out of the penalty box");
+        consoleMock.log(players[currentPlayer] + " is getting out of the penalty box");
         places[currentPlayer] = places[currentPlayer] + roll;
         if(places[currentPlayer] > 11){
           places[currentPlayer] = places[currentPlayer] - 12;
         }
 
-        console.log(players[currentPlayer] + "'s new location is " + places[currentPlayer]);
-        console.log("The category is " + currentCategory());
+        consoleMock.log(players[currentPlayer] + "'s new location is " + places[currentPlayer]);
+        consoleMock.log("The category is " + currentCategory());
         askQuestion();
       }else{
-        console.log(players[currentPlayer] + " is not getting out of the penalty box");
+        consoleMock.log(players[currentPlayer] + " is not getting out of the penalty box");
         isGettingOutOfPenaltyBox = false;
       }
     }else{
@@ -111,8 +119,8 @@ exports.Game = function() {
         places[currentPlayer] = places[currentPlayer] - 12;
       }
 
-      console.log(players[currentPlayer] + "'s new location is " + places[currentPlayer]);
-      console.log("The category is " + currentCategory());
+      consoleMock.log(players[currentPlayer] + "'s new location is " + places[currentPlayer]);
+      consoleMock.log("The category is " + currentCategory());
       askQuestion();
     }
   };
@@ -120,9 +128,9 @@ exports.Game = function() {
   this.wasCorrectlyAnswered = function(){
     if(inPenaltyBox[currentPlayer]){
       if(isGettingOutOfPenaltyBox){
-        console.log('Answer was correct!!!!');
+        consoleMock.log('Answer was correct!!!!');
         purses[currentPlayer] += 1;
-        console.log(players[currentPlayer] + " now has " +
+        consoleMock.log(players[currentPlayer] + " now has " +
                     purses[currentPlayer]  + " Gold Coins.");
 
         var winner = didPlayerWin();
@@ -142,10 +150,10 @@ exports.Game = function() {
 
     }else{
 
-      console.log("Answer was correct!!!!");
+      consoleMock.log("Answer was correct!!!!");
 
       purses[currentPlayer] += 1;
-      console.log(players[currentPlayer] + " now has " +
+      consoleMock.log(players[currentPlayer] + " now has " +
                   purses[currentPlayer]  + " Gold Coins.");
 
       var winner = didPlayerWin();
@@ -159,8 +167,8 @@ exports.Game = function() {
   };
 
   this.wrongAnswer = function(){
-		console.log('Question was incorrectly answered');
-		console.log(players[currentPlayer] + " was sent to the penalty box");
+		consoleMock.log('Question was incorrectly answered');
+		consoleMock.log(players[currentPlayer] + " was sent to the penalty box");
 		inPenaltyBox[currentPlayer] = true;
 
     currentPlayer += 1;
@@ -170,22 +178,44 @@ exports.Game = function() {
   };
 };
 
-var notAWinner = false;
+playGame = (gameInput) => {
+  var notAWinner = false;
 
-var game = new Game();
+  let roundIndex = 0;
+  var game = new Game();
+  var round = 0;
 
-game.add('Chet');
-game.add('Pat');
-game.add('Sue');
+  game.add('Chet');
+  game.add('Pat');
+  game.add('Sue');
+  
+  console.log(!!gameInput)
+  do{
+    
+    let round = {};
+    round.roll = gameInput ? gameInput.mock[roundIndex].roll : Math.floor(Math.random()*6) + 1;
+    game.roll(round.roll);
+  
+    round.wrongAnswer = gameInput ? gameInput.mock[roundIndex].wrongAnswer : Math.floor(Math.random()*10) === 7;
+    if(round.wrongAnswer){
+      notAWinner = game.wrongAnswer();
+    }else{
+      notAWinner = game.wasCorrectlyAnswered();
+    }
 
-do{
+    mock.push(round);
+    roundIndex++;
+  }while(notAWinner);
 
-  game.roll(Math.floor(Math.random()*6) + 1);
+  var gamePlay = {
+    mock,
+    gameOutput
+  };
 
-  if(Math.floor(Math.random()*10) == 7){
-    notAWinner = game.wrongAnswer();
-  }else{
-    notAWinner = game.wasCorrectlyAnswered();
-  }
+ return gameOutput;
+}
 
-}while(notAWinner);
+module.exports = {
+  Game,
+  playGame
+}
